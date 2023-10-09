@@ -372,16 +372,25 @@ mymean(x) = mean(x)
         @test mean(≤(1.01), Rtail) < 0.8
     end
 
-    @testset "ess with known expectation" begin
+    @testset "ess with known expectations" begin
         n = 1_000_000
         σ = 3.0
         μ = [0.]
-        max_rel_err = mapreduce(max, (-0.5):0.1:0.9) do ϕ
+        # test that exact rel ess is recovered
+        @test all((-0.5):0.1:0.9) do ϕ
             ς  = sqrt(1-abs2(ϕ))*σ
             xs = ar1(ϕ,ς,n)
             estimated_rel_ess = ess(xs, kind=:basic, exact_means=μ, relative=true)
-            abs(estimated_rel_ess/ar1_exact_rel_ess(ϕ) - 1)
+            abs(estimated_rel_ess/ar1_exact_rel_ess(ϕ) - 1) < 0.05
         end
-        @test max_rel_err < 0.05
+        
+        # check that taking mean to infty decreases ess
+        ϕ  = 0.95
+        ς  = sqrt(1-abs2(ϕ))*σ    
+        xs = ar1(ϕ,ς,n)
+        ess_vec = map(0:5) do m
+            ess(xs, kind=:basic, exact_means=[m], relative=true)
+        end
+        @test all(<(0), diff(ess_vec))
     end
 end
