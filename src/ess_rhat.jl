@@ -449,6 +449,7 @@ function _ess_rhat(
     autocov_method::AbstractAutocovMethod=AutocovMethod(),
     split_chains::Int=2,
     maxlag::Int=250,
+    exact_means::Union{Nothing,AbstractVector} = nothing
 )
     # compute size of matrices (each chain may be split!)
     niter = size(chains, 1) ÷ split_chains
@@ -487,6 +488,9 @@ function _ess_rhat(
     # set maximum relative ess for antithetic chains, see below
     rel_ess_max = log10(oftype(one(T), ntotal))
 
+    isnothing(exact_means) || length(exact_means) == length(ess) || 
+        throw(ArgumentError("length(exact_means) = $(length(exact_means)) ≠ length(ess) = $(length(ess))"))
+
     # for each parameter
     for (i, chains_slice) in zip(eachindex(ess), _eachparam(chains))
         # check that no values are missing
@@ -499,8 +503,12 @@ function _ess_rhat(
         # split chains
         copyto_split!(samples, chains_slice)
 
-        # calculate mean of chains
-        Statistics.mean!(chain_mean, samples)
+        # calculate mean of chains or fill with known mean
+        if isnothing(exact_means)
+            Statistics.mean!(chain_mean, samples)
+        else
+            fill!(chain_mean, exact_means[i])
+        end
 
         # calculate within-chain variance
         @inbounds for j in 1:nchains
@@ -512,7 +520,8 @@ function _ess_rhat(
 
         # compute variance estimator var₊, which accounts for between-chain variance as well
         # avoid NaN when nchains=1 and set the variance estimator var₊ to the the within-chain variance in that case
-        var₊ = correctionfactor * W + Statistics.var(chain_mean; corrected=(nchains > 1))
+        var₊ = correctionfactor * W
+        isnothing(exact_means) && (var₊ += Statistics.var(chain_mean; corrected=(nchains > 1)))
         inv_var₊ = inv(var₊)
 
         # estimate rhat
