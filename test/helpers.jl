@@ -10,6 +10,7 @@ function ar1(φ::Real, σ::Real, n::Int...)
     end
     return x
 end
+ar1_exact_rel_ess(φ) = (1-φ)/(1+φ) # = inverse of the autocorrelation time τ
 
 asymptotic_dist(::typeof(mean), dist) = Normal(mean(dist), std(dist))
 function asymptotic_dist(::typeof(var), dist)

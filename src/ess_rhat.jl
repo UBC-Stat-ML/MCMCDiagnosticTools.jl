@@ -489,7 +489,7 @@ function _ess_rhat(
     rel_ess_max = log10(oftype(one(T), ntotal))
 
     isnothing(exact_means) || length(exact_means) == length(ess) || 
-        throw(ArgumentError("length(exact_means) = $(length(exact_means)) ≠ length(ess) = $(length(ess))"))
+        throw(ArgumentError("length(exact_means) = $(length(exact_means)) but chains have $(length(ess)) parameters"))
 
     # for each parameter
     for (i, chains_slice) in zip(eachindex(ess), _eachparam(chains))
